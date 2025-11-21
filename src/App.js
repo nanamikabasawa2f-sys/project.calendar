@@ -335,7 +335,7 @@ function App() {
         {/* ★ 予定の表示 ★ */}
         <div className="mt-1 space-y-0.5">
           {dayEvents.slice(0, 2).map((event, index) => {
-            // ★★★ 修正箇所 5: category を使用 ★★★
+
             const classes = getCategoryClass(event.category);
             return (
               <div 
