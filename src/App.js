@@ -304,7 +304,7 @@ function App() {
   const dates = [];
   // (a) 月の始まる前の「空白」を埋める
   for (let i = 0; i < startDayOfWeek; i++) {
-    dates.push(<div key={`empty-${i}`} className="border rounded-lg p-2 h-20 bg-gray-50"></div>);
+    dates.push(<div key={`empty-${i}`} className="border rounded-lg p-3 h-24 bg-gray-50"></div>);
   }
 
   // (b) 1日から最後の日までを埋める
@@ -325,10 +325,10 @@ function App() {
     dates.push(
       <div 
         key={`date-${i}`} 
-        className={`border rounded-lg p-2 h-20 transition-colors ${dateClass}`}
+        className={`border rounded-lg p-3 h-24 transition-colors ${dateClass}`}
         onClick={() => handleDateClick(date)}
       >
-        <p className="text-xl">
+        <p className="text-xs font-bold">
           {i}
         </p>
         
