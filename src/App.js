@@ -304,7 +304,7 @@ function App() {
   const dates = [];
   // (a) 月の始まる前の「空白」を埋める
   for (let i = 0; i < startDayOfWeek; i++) {
-    dates.push(<div key={`empty-${i}`} className="border rounded-lg p-2 h-20 bg-gray-50"></div>);
+    dates.push(<div key={`empty-${i}`} className="border rounded-lg p-3 h-24 bg-gray-50"></div>);
   }
 
   // (b) 1日から最後の日までを埋める
@@ -325,17 +325,25 @@ function App() {
     dates.push(
       <div 
         key={`date-${i}`} 
-        className={`border rounded-lg p-2 h-20 transition-colors ${dateClass}`}
+        className={`border rounded-lg p-3 h-24 transition-colors ${dateClass}`}
         onClick={() => handleDateClick(date)}
       >
-        <p className="text-xl">
+        <p className="text-xs font-bold">
           {i}
         </p>
         
         {/* ★ 予定の表示 ★ */}
         <div className="mt-1 space-y-0.5">
           {dayEvents.slice(0, 2).map((event, index) => {
-
+          const getCategoryClass = (category) => {
+            switch (category) {
+              case 'part-time': return { bg: 'bg-red-200', text: 'text-red-800', border: 'border-red-600' };
+              case 'school': return { bg: 'bg-blue-200', text: 'text-blue-800', border: 'border-blue-600' };
+              case 'personal': return { bg: 'bg-green-200', text: 'text-green-800', border: 'border-green-600' };
+              case 'other': return { bg: 'bg-gray-200', text: 'text-gray-800', border: 'border-gray-600' };
+              default: return { bg: 'bg-gray-200', text: 'text-gray-800', border: 'border-gray-600' };
+              }
+            };
             const classes = getCategoryClass(event.category);
             return (
               <div 
@@ -357,15 +365,7 @@ function App() {
     );
   }
   
-  const getCategoryClass = (category) => {
-    switch (category) {
-      case 'part-time': return { bg: 'bg-red-200', text: 'text-red-800', border: 'border-red-600' };
-      case 'school': return { bg: 'bg-blue-200', text: 'text-blue-800', border: 'border-blue-600' };
-      case 'personal': return { bg: 'bg-green-200', text: 'text-green-800', border: 'border-green-600' };
-      case 'other': return { bg: 'bg-gray-200', text: 'text-gray-800', border: 'border-gray-600' };
-      default: return { bg: 'bg-gray-200', text: 'text-gray-800', border: 'border-gray-600' };
-    }
-  };
+  
 
   const weekdays = ["日", "月", "火", "水", "木", "金", "土"];
   
