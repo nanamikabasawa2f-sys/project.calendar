@@ -31,7 +31,7 @@ const EventModal = ({ selectedDate, events, setEvents, closeModal }) => {
   const generateTimeOptions = () => {
     const options = [];
     for (let h = 0; h < 24; h++) {
-      for (let m = 0; m < 60; m += 30) {
+      for (let m = 0; m < 60; m += 1) {
         options.push(
           `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`
         );
