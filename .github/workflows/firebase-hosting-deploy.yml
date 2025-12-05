@@ -1,0 +1,33 @@
+name: Deploy to Firebase Hosting
+
+on:
+  push:
+    branches:
+      - main # デプロイをトリガーするブランチ名 (例: main, master) を指定
+
+jobs:
+  build_and_deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # 必要に応じてビルドステップを追加
+      # 例: Node.jsプロジェクトの場合
+      # - name: Setup Node.js
+      #   uses: actions/setup-node@v4
+      #   with:
+      #     node-version: '20' # 使用するNodeのバージョンを指定
+      # - name: Install dependencies
+      #   run: npm install
+      # - name: Build project
+      #   run: npm run build # プロジェクトのビルドコマンド
+
+      - name: Deploy to Firebase
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: '${{ secrets.GITHUB_TOKEN }}'
+          firebaseServiceAccount: '${{ secrets.FIREBASE_TOKEN }}' # ステップ2で設定したSecretの名前
+          projectId: 'project-2025-b92e7' # あなたのプロジェクトID
+          channelId: 'live' # ライブURLにデプロイする場合 'live' を指定
+          # public: './public' # firebase.json の設定に従うため、通常は不要
