@@ -6,28 +6,30 @@ on:
       - main # デプロイをトリガーするブランチ名 (例: main, master) を指定
 
 jobs:
-  build_and_deploy:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      build_and_deploy:
+        runs-on: ubuntu-latest
+        steps:
+          - name: Checkout code
+            uses: actions/checkout@v4
 
-      # 必要に応じてビルドステップを追加
-      # 例: Node.jsプロジェクトの場合
-      # - name: Setup Node.js
-      #   uses: actions/setup-node@v4
-      #   with:
-      #     node-version: '20' # 使用するNodeのバージョンを指定
-      # - name: Install dependencies
-      #   run: npm install
-      # - name: Build project
-      #   run: npm run build # プロジェクトのビルドコマンド
+          # 🚨 Reactプロジェクトに必須のビルドステップ 🚨
+          - name: Setup Node.js
+            uses: actions/setup-node@v4
+            with:
+              node-version: '20' # あなたのプロジェクトのNodeバージョンに合わせる
+              
+          - name: Install dependencies
+            run: npm install
 
-      - name: Deploy to Firebase
-        uses: FirebaseExtended/action-hosting-deploy@v0
-        with:
-          repoToken: '${{ secrets.GITHUB_TOKEN }}'
-          firebaseServiceAccount: '${{ secrets.FIREBASE_TOKEN }}' # ステップ2で設定したSecretの名前
-          projectId: 'project-2025-b92e7' # あなたのプロジェクトID
-          channelId: 'live' # ライブURLにデプロイする場合 'live' を指定
-          # public: './public' # firebase.json の設定に従うため、通常は不要
+          - name: Build project
+            run: npm run build # Reactのビルドコマンド
+
+          # デプロイステップ
+          - name: Deploy to Firebase
+            uses: FirebaseExtended/action-hosting-deploy@v0
+            with:
+              repoToken: '${{ secrets.GITHUB_TOKEN }}'
+              # ★ 修正済み: GitHub Secret名に合わせる
+              firebaseServiceAccount: '${{ secrets.FIREBASE_TOKEN }}' 
+              projectId: 'project-2025-b92e7'
+              channelId: 'live'
