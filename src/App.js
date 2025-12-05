@@ -20,6 +20,7 @@ const EventModal = ({ selectedDate, events, setEvents, closeModal }) => {
 
   const dateKey = `${selectedDate.getFullYear()}-${selectedDate.getMonth() + 1}-${selectedDate.getDate()}`;
 
+  //カテゴリの記入(ここを変更してカテゴリの記入をアプリ上でできるようにしたい)
   const categoryOptions = [
     { value: 'part-time', label: 'バイト', bgColor: 'bg-red-500' },      // バイトは赤
     { value: 'school', label: '学校の予定', bgColor: 'bg-blue-500' },   // 学校は青
@@ -28,10 +29,11 @@ const EventModal = ({ selectedDate, events, setEvents, closeModal }) => {
   ];
 
   // 00:00 から 23:30 までの30分刻みの時間オプションを生成
+  //1分刻みに変更　(11/28 長谷部)
   const generateTimeOptions = () => {
     const options = [];
     for (let h = 0; h < 24; h++) {
-      for (let m = 0; m < 60; m += 30) {
+      for (let m = 0; m < 60; m += 1) {
         options.push(
           `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`
         );
@@ -41,12 +43,13 @@ const EventModal = ({ selectedDate, events, setEvents, closeModal }) => {
   };
   const timeOptions = generateTimeOptions();
 
+  //予定が記入されなかった時のためのコード
   const handleSubmit = () => {
     if (!title) {
       alert('予定を入力');
       return;
     }
-
+   //イベントの作成コード
     const newEvent = {
       id: Date.now(),
       title,
@@ -63,6 +66,7 @@ const EventModal = ({ selectedDate, events, setEvents, closeModal }) => {
     closeModal();
   };
 
+  //スケジュール記入の際に出てくるウィンドウの見た目のコード
   return (
     <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white p-6 rounded-lg shadow-xl w-full max-w-md">
@@ -186,6 +190,7 @@ const DayView = ({ selectedDate, events, setView }) => {
     `${i.toString().padStart(2, '0')}:00`
   );
 
+  //カテゴリによって色を変えて表示(ここも変更して、スケジュール記入の時と合わせる)
   const getEventClass = (category) => {
     switch (category) {
       case 'part-time': return 'bg-red-300 border-red-600';
@@ -199,6 +204,7 @@ const DayView = ({ selectedDate, events, setView }) => {
   // 1時間あたりの高さ（px）。見た目に合わせて調整してください
   const hourHeight = 64;
 
+  //表示モードで日にちをクリックした時の見た目を設定しているコード
   return (
     <div className="p-4">
       <div className="flex justify-between items-center mb-6">
@@ -269,6 +275,7 @@ const DayView = ({ selectedDate, events, setView }) => {
   );
 };
 
+//全体のアプリケーション表示に関するコード(月のカレンダーの画面のコード)
 function App() {
   const [currentDate, setCurrentDate] = useState(new Date(2025, 10, 1)); // 2025/11/1
   const [events, setEvents] = useState({}); // { '2025-11-21': [{...}, {...}] }
