@@ -297,6 +297,14 @@ function App() {
     const prevDate = new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1);
     setCurrentDate(prevDate);
   };
+    const handleNextYear = () => {
+    const nextDate = new Date(currentDate.getFullYear() + 1, currentDate.getMonth() , 1);
+    setCurrentDate(nextDate);
+  };
+  const handlePrevYear = () => {
+    const prevDate = new Date(currentDate.getFullYear() - 1, currentDate.getMonth() , 1);
+    setCurrentDate(prevDate);
+  };
 
   // --- 日付クリック時の処理 ---
   const handleDateClick = (date) => {
@@ -414,24 +422,50 @@ function App() {
           <div className="month-view">
             
             {/* 1. ヘッダー (ナビゲーションボタン) */}
-            <div className="flex justify-between items-center mb-6">
-              <button 
-                className="px-4 py-2 bg-blue-500 text-white rounded-lg shadow hover:bg-blue-600 transition-colors"
-                onClick={handlePrevMonth}
-              >
-                &lt; 前
-              </button>
-              <h2 className="text-3xl font-bold text-gray-800">
-                {year}年 {month + 1}月 
-              </h2>
-              <button 
-                className="px-4 py-2 bg-blue-500 text-white rounded-lg shadow hover:bg-blue-600 transition-colors"
-                onClick={handleNextMonth}
-              >
-                次 &gt;
-              </button>
-            </div>
-            
+<div className="flex justify-between items-center mb-6">
+
+  {/* 左ブロック：前の月・前の年 */}
+  <div className="flex flex-col gap-2">
+    <button 
+      className="px-4 py-2 bg-blue-500 text-white rounded-lg shadow hover:bg-blue-600 transition-colors"
+      onClick={handlePrevMonth}
+    >
+      &lt; 前
+    </button>
+
+    <button 
+      className="px-4 py-2 bg-blue-500 text-white rounded-lg shadow hover:bg-blue-600 transition-colors"
+      onClick={handlePrevYear}
+    >
+      &lt; 前の年
+    </button>
+  </div>
+
+  {/* 中央: 年月タイトル */}
+  <h2 className="text-3xl font-bold text-gray-800 text-center">
+    {year}年 {month + 1}月
+  </h2>
+
+  {/* 右ブロック：次の月・次の年 */}
+  <div className="flex flex-col gap-2">
+    <button 
+      className="px-4 py-2 bg-blue-500 text-white rounded-lg shadow hover:bg-blue-600 transition-colors"
+      onClick={handleNextMonth}
+    >
+      次 &gt;
+    </button>
+
+    <button 
+      className="px-4 py-2 bg-blue-500 text-white rounded-lg shadow hover:bg-blue-600 transition-colors"
+      onClick={handleNextYear}
+    >
+      次の年 &gt;
+    </button>
+  </div>
+
+</div>
+
+
             {/* 📝 表示専用ボタンの追加 */}
             <div className="flex justify-end mb-4">
               <button 
