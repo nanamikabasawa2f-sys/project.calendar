@@ -201,6 +201,9 @@ const DayView = ({ selectedDate, events, setView }) => {
     }
   };
 
+  // 1時間あたりの高さ（px）。見た目に合わせて調整してください
+  const hourHeight = 64;
+
   //表示モードで日にちをクリックした時の見た目を設定しているコード
   return (
     <div className="p-4">
@@ -227,39 +230,47 @@ const DayView = ({ selectedDate, events, setView }) => {
             </div>
           ))
         ) : (
-          <p className="text-gray-500">終日イベントはありません</p>
-        )}
-      </div>
+<>
+  <p className="text-gray-500">終日イベントはありません</p>
+  <h3 className="text-xl font-semibold mb-3">時間スケジュール (1時間刻み)</h3>
+  <div className="border border-gray-200 rounded-lg overflow-hidden">
+    {/* 全体高さを24時間分に設定、相対位置基準にする */}
+    <div className="relative" style={{ height: `${hourHeight * 24}px` }}>
+      {/* 時間行（ラベルと罫線）を描画 */}
+      {timeSlots.map(slot => (
+        <div key={`row-${slot}`} style={{ height: `${hourHeight}px` }} className="flex border-b border-gray-100">
+          <div className="w-20 text-right p-2 text-sm text-gray-500 border-r border-gray-200">
+            {slot}
+          </div>
+          <div className="flex-1 p-2" /> {/* 空白（イベントは絶対配置する） */}
+        </div>
+      ))}
 
-      <h3 className="text-xl font-semibold mb-3">時間スケジュール (1時間刻み)</h3>
-      <div className="border border-gray-200 rounded-lg overflow-hidden">
-        {timeSlots.map(slot => {
-          const slotHour = parseInt(slot.split(':')[0]);
-          // この1時間スロットに該当するイベントをフィルタリング
-          const slotEvents = timeEvents.filter(event => {
-            const startHour = parseInt(event.start.split(':')[0]);
-            const endHour = parseInt(event.end.split(':')[0]);
-            
-            // 例: 9:00 のスロットは 9:00〜9:59 のイベントを表示
-            return startHour === slotHour || (startHour < slotHour && endHour > slotHour);
-          });
+      {/* イベントを絶対配置で一度だけ描画（またがる場合は高さで表現） */}
+      {timeEvents.map(event => {
+        const [sh, sm] = event.start.split(':').map(Number);
+        const [eh, em] = event.end.split(':').map(Number);
 
-          return (
-            <div key={slot} className="flex border-b border-gray-100 hover:bg-gray-50">
-              <div className="w-20 text-right p-2 text-sm text-gray-500 border-r border-gray-200">
-                {slot}
-              </div>
-              <div className="flex-1 p-2 min-h-[4rem] flex flex-col space-y-1">
-                {slotEvents.map(event => (
-                  <div key={event.id} className={`p-1 rounded text-sm border-l-4 font-medium ${getEventClass(event.category)}`}>
-                    {event.title} ({event.start} - {event.end})
-                  </div>
-                ))}
-              </div>
-            </div>
-          );
-        })}
-      </div>
+        const startMinutes = sh * 60 + sm;
+        const endMinutes = eh * 60 + em;
+        const top = (startMinutes / 60) * hourHeight;
+        const height = Math.max((endMinutes - startMinutes) / 60 * hourHeight, 20); // 最小高さを確保
+
+        return (
+          <div
+            key={event.id}
+            className={`absolute left-20 right-2 p-2 rounded text-sm border-l-4 font-medium ${getEventClass(event.category)}`}
+            style={{ top: `${top}px`, height: `${height}px`, overflow: 'hidden' }}
+          >
+            <div className="font-semibold text-sm truncate">{event.title}</div>
+            <div className="text-xs text-gray-700">{event.start} - {event.end}</div>
+          </div>
+        );
+      })}
+    </div>
+  </div>
+</>
+        )}</div>
     </div>
   );
 };
