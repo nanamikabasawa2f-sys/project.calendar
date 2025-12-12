@@ -24,15 +24,18 @@ jobs:
           - name: Build project
             run: npm run build # Reactのビルドコマンド
 
-          # デプロイステップ
+
           - name: Deploy to Firebase
             uses: FirebaseExtended/action-hosting-deploy@v0
             with:
               repoToken: '${{ secrets.GITHUB_TOKEN }}'
-              # ★ 修正済み: GitHub Secret名に合わせる
-              firebaseServiceAccount: '${{ secrets.FIREBASE_TOKEN }}' 
               projectId: 'project-2025-b92e7'
               channelId: 'live'
+              public: 'build' 
+            # ★★★ ここに env: ブロックを追加 ★★★
+            env:
+              # SecretsのBASE64エンコード値を環境変数として渡す
+              GCLOUD_SERVICE_ACCOUNT_KEY: ${{ secrets.FIREBASE_TOKEN }}
 
   
               
