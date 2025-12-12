@@ -1,13 +1,7 @@
 import React, { useState } from 'react';
 import './index.css';
 
-// ====================================================================
-// 1. EventModal: 予定入力用のモーダルコンポーネント
-// ====================================================================
 
-/**
- * 予定入力用のモーダル。終日か時間指定かを選択し、色を設定できる。
- */
 const EventModal = ({ selectedDate, events, setEvents, closeModal }) => {
 
   const [title, setTitle] = useState('');
@@ -171,13 +165,7 @@ const EventModal = ({ selectedDate, events, setEvents, closeModal }) => {
 };
 
 
-// ====================================================================
-// 2. DayView: 日ごとのスケジュール表示コンポーネント
-// ====================================================================
 
-/**
- * 1日分のスケジュールを1時間刻みで表示するコンポーネント。
- */
 const DayView = ({ selectedDate, events, setView }) => {
   const dateKey = `${selectedDate.getFullYear()}-${selectedDate.getMonth() + 1}-${selectedDate.getDate()}`;
   const dayEvents = events[dateKey] || [];
