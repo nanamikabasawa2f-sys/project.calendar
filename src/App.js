@@ -5,25 +5,20 @@ import { subscribeToEvents } from './dbService';
 import './index.css';
 
 
-const EventModal = ({ selectedDate, events, setEvents, closeModal }) => {
+const EventModal = ({ selectedDate, events, setEvents, closeModal, categoryModal, categoryOptions }) => {
 
   const [title, setTitle] = useState('');
   const [eventType, setEventType] = useState('all-day'); 
   const [startTime, setStartTime] = useState('09:00');
   const [endTime, setEndTime] = useState('10:00');
-  const [category, setCategory] = useState('personal');
+  const [category, setCategory] = useState(categoryOptions[0]?.value || 'personal');
 
   if (!selectedDate) return null;
 
   const dateKey = `${selectedDate.getFullYear()}-${selectedDate.getMonth() + 1}-${selectedDate.getDate()}`;
 
   //カテゴリの記入(ここを変更してカテゴリの記入をアプリ上でできるようにしたい)
-  const categoryOptions = [
-    { value: 'part-time', label: 'バイト', bgColor: 'bg-red-500' },      // バイトは赤
-    { value: 'school', label: '学校の予定', bgColor: 'bg-blue-500' },   // 学校は青
-    { value: 'personal', label: 'プライベート', bgColor: 'bg-green-500' }, // プライベートは緑
-    { value: 'other', label: 'その他', bgColor: 'bg-gray-500' },        // その他は灰色
-  ];
+
 
   // 00:00 から 23:30 までの30分刻みの時間オプションを生成
   //1分刻みに変更　(11/28 長谷部)
@@ -161,6 +156,13 @@ const EventModal = ({ selectedDate, events, setEvents, closeModal }) => {
             {option.label}
           </button>
         ))}
+        {/*  カテゴリ追加コード  (12/19)*/}
+        <button
+          onClick={() =>categoryModal()}
+          className="flex items-center p-2 rounded-full text-sm bg-gray-300 hover:bg-gray-400 transition-colors text-gray-700 font-bold" 
+        >
+          + 追加
+        </button>
       </div>
     </div>
 
@@ -172,7 +174,7 @@ const EventModal = ({ selectedDate, events, setEvents, closeModal }) => {
             キャンセル
           </button>
           <button
-            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+            className="px-4 py-2 bg-sky-500 text-white rounded hover:bg-sky-600"
             onClick={handleSubmit}
           >
             保存
@@ -183,7 +185,66 @@ const EventModal = ({ selectedDate, events, setEvents, closeModal }) => {
   );
 };
 
+///カテゴリ追加用モーダル
+const CategoryAddModal = ({ closeModal, onAddCategory }) => {
+  const [newCategoryName, setNewCategoryName] = useState('');
+  const [newCategoryColor, setNewCategoryColor] = useState('bg-purple-400');
 
+  const colorOptions = [
+    { value: 'bg-rose-400', label: '  ' },
+    { value: 'bg-orange-300', label: '  ' },
+    { value: 'bg-yellow-300', label: '  ' },
+    { value: 'bg-emerald-300', label: '  ' },
+    { value: 'bg-cyan-300', label: '  ' },
+    { value: 'bg-sky-400', label: '  ' },
+    { value: 'bg-purple-300', label: '  ' },
+    { value: 'bg-pink-300', label: '  ' },
+  ];
+
+  const handleAddCategory = () => {
+    if (!newCategoryName.trim()) {
+      alert('カテゴリ名を入力してください');
+      return;
+    }
+    onAddCategory(newCategoryName, newCategoryColor);
+    setNewCategoryName('');
+    setNewCategoryColor('bg-purple-400');
+    closeModal();
+  };
+
+  return (
+    <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white p-6 rounded-lg shadow-xl w-full max-w-md">
+        <h3 className="text-xl font-bold mb-4">新しいカテゴリを追加</h3>
+        
+        <div className="mb-4">
+          <label className="block text-gray-700 font-bold mb-2">カテゴリ名</label>
+          <input
+            type="text"
+            className="w-full p-2 border rounded"
+            value={newCategoryName}
+            onChange={(e) => setNewCategoryName(e.target.value)}
+          />
+        </div>
+
+        <div className="mb-6">
+          <label className="block text-gray-700 font-bold mb-2">色を選択</label>
+          <div className="flex flex-wrap gap-2">
+            {colorOptions.map(option => (
+              <button
+                key={option.value}
+                onClick={() => setNewCategoryColor(option.value)}
+                className={`flex items-center p-4 rounded-full text-sm transition-shadow ${option.value} ${
+                  newCategoryColor === option.value ? 'ring-4 ring-offset-2 ring-gray-400' : ''
+                }`}
+                style={{ color: 'white' }}
+                title={option.label}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+        </div>
 
 const DayView = ({ selectedDate, events, setView, onDelete}) => {
   const dateKey = `${selectedDate.getFullYear()}-${selectedDate.getMonth() + 1}-${selectedDate.getDate()}`;
@@ -200,11 +261,11 @@ const DayView = ({ selectedDate, events, setView, onDelete}) => {
   //カテゴリによって色を変えて表示(ここも変更して、スケジュール記入の時と合わせる)
   const getEventClass = (category) => {
     switch (category) {
-      case 'part-time': return 'bg-red-300 border-red-600';
-      case 'school': return 'bg-blue-300 border-blue-600';
-      case 'personal': return 'bg-green-300 border-green-600';
-      case 'other': return 'bg-gray-300 border-gray-600';
-      default: return 'bg-gray-300 border-gray-600';
+      case 'part-time': return 'bg-rose-300 border-rose-600';
+      case 'school': return 'bg-sky-300 border-sky-600';
+      case 'personal': return 'bg-emerald-300 border-emerald-600';
+      case 'other': return 'bg-gray-200 border-gray-500';
+      default: return 'bg-gray-200 border-gray-500';
     }
   };
 
@@ -220,7 +281,7 @@ const DayView = ({ selectedDate, events, setView, onDelete}) => {
           className="px-4 py-2 bg-gray-500 text-white rounded-lg shadow hover:bg-gray-600 transition-colors"
           onClick={() => setView('month')} 
         >
-          &lt; 月表示に戻る
+          &lt; に戻る
         </button>
         <h2 className="text-xl font-bold text-gray-800">
           {selectedDate.getFullYear()}年 {selectedDate.getMonth() + 1}月{selectedDate.getDate()}日
