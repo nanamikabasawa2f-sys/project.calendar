@@ -234,18 +234,32 @@ const CategoryAddModal = ({ closeModal, onAddCategory }) => {
               <button
                 key={option.value}
                 onClick={() => setNewCategoryColor(option.value)}
-                className={`flex items-center p-4 rounded-full text-sm transition-shadow ${option.value} ${
-                  newCategoryColor === option.value ? 'ring-4 ring-offset-2 ring-gray-400' : ''
+                className={`w-8 h-8 rounded-full transition-all ${option.value} ${
+                  newCategoryColor === option.value ? 'ring-4 ring-offset-2 ring-gray-400 scale-110' : ''
                 }`}
-                style={{ color: 'white' }}
-                title={option.label}
-              >
-                {option.label}
-              </button>
+              />
             ))}
           </div>
         </div>
 
+        <div className="flex justify-end space-x-3">
+          <button
+            className="px-4 py-2 text-gray-400 text-sm font-bold"
+            onClick={closeModal}
+          >
+            キャンセル
+          </button>
+          <button
+            className="px-6 py-2 bg-pink-400 text-white rounded-xl text-sm font-bold shadow-md hover:bg-pink-500"
+            onClick={handleAddCategory}
+          >
+            追加する
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
 const DayView = ({ selectedDate, events, setView, onDelete}) => {
   const dateKey = `${selectedDate.getFullYear()}-${selectedDate.getMonth() + 1}-${selectedDate.getDate()}`;
   const dayEvents = events[dateKey] || [];
