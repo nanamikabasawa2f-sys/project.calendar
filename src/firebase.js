@@ -1,11 +1,9 @@
-// src/firebase.js
-
 import { initializeApp } from 'firebase/app';
 import { getFirestore } from 'firebase/firestore'; 
+import { getAuth } from 'firebase/auth'; 
 
-// ★★★ ここにFirebaseコンソールで取得した設定情報を貼り付けてください ★★★
 const firebaseConfig = {
-  //apiKey: 
+  apiKey: "AIzaSyBWWz4uY9-mOoIyakvT9x2lUoM9iIF6HoM",
   authDomain: "project-2025-b92e7.firebaseapp.com",
   projectId: "project-2025-b92e7",
   storageBucket: "project-2025-b92e7.firebasestorage.app",
@@ -16,9 +14,6 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 
-// Firestoreデータベースへの参照を取得
+// 他のファイルで使えるように、dbとauthをエクスポートします
 export const db = getFirestore(app);
-
-// この db を App.js でインポートして使用します
-
-//const analytics = getAnalytics(app);
+export const auth = getAuth(app); // ★これを使ってログイン状態を判別します

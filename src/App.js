@@ -1,4 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { auth, db } from './firebase'; // 作ったファイルをインポート
+import { onAuthStateChanged } from 'firebase/auth';
+import { subscribeToEvents } from './dbService';
 import './index.css';
 
 
@@ -37,27 +40,41 @@ const EventModal = ({ selectedDate, events, setEvents, closeModal }) => {
   };
   const timeOptions = generateTimeOptions();
 
-  //予定が記入されなかった時のためのコード
-  const handleSubmit = () => {
+  // 予定をFirebaseに保存するためのコード
+  const handleSubmit = async () => { // ★asyncを付けます
     if (!title) {
       alert('予定を入力');
       return;
     }
-   //イベントの作成コード
+
+    // 1. 保存するデータの中身を作る
     const newEvent = {
-      id: Date.now(),
       title,
       type: eventType,
       category: category,
-      ...(eventType === 'time' && { start: startTime, end: endTime })
+      dateKey: dateKey, // どの日の予定か（例: "2025-11-21"）
+      ...(eventType === 'time' && { start: startTime, end: endTime }),
+      createdAt: new Date()
     };
 
-    setEvents(prevEvents => ({
-      ...prevEvents,
-      [dateKey]: [...(prevEvents[dateKey] || []), newEvent]
-    }));
+    try {
+      // 2. Firebaseに保存
+      // users / {ユーザーID} / events という場所にデータを追加します
+      const { collection, addDoc } = await import('firebase/firestore'); 
+      const userEventsRef = collection(db, "users", auth.currentUser.uid, "events");
+      
+      await addDoc(userEventsRef, newEvent);
 
-    closeModal();
+      // 3. モーダルを閉じる
+      closeModal();
+      
+      // 注意: 今まであった setEvents(...) は消しても大丈夫です！
+      // 後で「Firebaseの変更を自動で読み取る仕組み」を App.js に入れるためです。
+
+    } catch (error) {
+      console.error("Firebase保存エラー:", error);
+      alert("保存できませんでした。ログインしているか確認してください。");
+    }
   };
 
   //スケジュール記入の際に出てくるウィンドウの見た目のコード
@@ -263,8 +280,49 @@ const DayView = ({ selectedDate, events, setView }) => {
   );
 };
 
+//ななみやったよ^ ^
 //全体のアプリケーション表示に関するコード(月のカレンダーの画面のコード)
 function App() {
+  const handleLogin = async () => {
+  // Firebaseの認証機能を読み込む
+  const { GoogleAuthProvider, signInWithPopup } = await import('firebase/auth');
+  const provider = new GoogleAuthProvider();
+  
+  try {
+    // ポップアップを出してGoogleログインを実行
+    await signInWithPopup(auth, provider);
+  } catch (error) {
+    console.error("ログインエラー:", error);
+    alert("ログインに失敗しました。もう一度試してください。");
+  }
+};
+  const [user, setUser] = useState(null);
+useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser); // ここで setUser を使うので警告が消えます
+    });
+    return () => unsubscribe();
+  }, []);
+
+useEffect(() => {
+  let unsubscribe;
+  
+  if (user) {
+    // ここで subscribeToEvents を呼び出します！
+    // これでインポート部分が「光り」、警告も消えます。
+    unsubscribe = subscribeToEvents(user.uid, (loadedEvents) => {
+      setEvents(loadedEvents); // 届いたデータをカレンダーにセット
+    });
+  } else {
+    setEvents({}); // ログアウト時は空にする
+  }
+
+  // 画面を閉じたりしたときにお掃除する設定
+  return () => {
+    if (unsubscribe) unsubscribe();
+  };
+}, [user]); // user（ログイン状態）が変わるたびに実行
+
   const [currentDate, setCurrentDate] = useState(new Date(2025, 10, 1)); // 2025/11/1
   const [events, setEvents] = useState({}); // { '2025-11-21': [{...}, {...}] }
   const [isReadOnly, setIsReadOnly] = useState(false);
@@ -376,10 +434,32 @@ function App() {
   const weekdays = ["日", "月", "火", "水", "木", "金", "土"];
   
   // --- メインレンダリング ---
-  return (
-    <div className="min-h-screen bg-gray-100 p-8"> 
-      <div className="container mx-auto p-6 max-w-xl bg-white rounded-xl shadow-lg">
-        
+return (
+    <div className="min-h-screen bg-gray-100 p-8 flex items-center justify-center"> 
+      {!user ? (
+        /* --- ログインしていない時に表示されるカード --- */
+        <div className="bg-white p-10 rounded-2xl shadow-xl max-w-sm w-full text-center">
+          <h2 className="text-2xl font-bold mb-6 text-gray-800">~共有しやすいカレンダー~</h2>
+          <p className="text-gray-500 mb-8">ログインしよう!!</p>
+          
+          <button 
+            onClick={handleLogin} // 前に作ったログイン関数を呼ぶ
+            className="w-full flex items-center justify-center px-4 py-3 border border-gray-300 rounded-lg shadow-sm bg-white hover:bg-gray-50 transition-all font-medium text-gray-700"
+          >
+            <img 
+              src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" 
+              alt="Google" 
+              className="w-5 h-5 mr-3" 
+            />
+            Googleでサインイン
+          </button>
+        </div>
+        ) : (
+          /* --- ログインしていたら、元々のコードをそのまま表示 --- */
+          <div className="container mx-auto p-6 max-w-xl bg-white rounded-xl shadow-lg">
+            {/* ログアウトボタンだけひっそり追加しておくと便利です */}
+            <button onClick={() => auth.signOut()} className="text-xs text-gray-400 mb-2 underline">ログアウト</button>
+          
         {/* モーダル表示 */}
         {showModal && (
           <EventModal 
@@ -452,6 +532,8 @@ function App() {
         )}
 
       </div>
+    )}
+      {/* --- 出し分けここまで --- */}
     </div>
   );
 }
