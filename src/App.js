@@ -22,10 +22,10 @@ const EventModal = ({ selectedDate, events, setEvents, closeModal }) => {
 
   //カテゴリの記入(ここを変更してカテゴリの記入をアプリ上でできるようにしたい)
   const categoryOptions = [
-    { value: 'part-time', label: 'バイト', bgColor: 'bg-red-500' },      // バイトは赤
-    { value: 'school', label: '学校の予定', bgColor: 'bg-blue-500' },   // 学校は青
-    { value: 'personal', label: 'プライベート', bgColor: 'bg-green-500' }, // プライベートは緑
-    { value: 'other', label: 'その他', bgColor: 'bg-gray-500' },        // その他は灰色
+    { value: 'part-time', label: 'バイト', bgColor: 'bg-rose-400' },      // バイトは赤
+    { value: 'school', label: '学校の予定', bgColor: 'bg-sky-400' },   // 学校は青
+    { value: 'personal', label: 'プライベート', bgColor: 'bg-emerald-400' }, // プライベートは緑
+    { value: 'other', label: 'その他', bgColor: 'bg-gray-400' },        // その他は灰色
   ];
 
   // 00:00 から 23:30 までの30分刻みの時間オプションを生成
@@ -159,7 +159,7 @@ const EventModal = ({ selectedDate, events, setEvents, closeModal }) => {
             キャンセル
           </button>
           <button
-            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+            className="px-4 py-2 bg-sky-500 text-white rounded hover:bg-sky-600"
             onClick={handleSubmit}
           >
             保存
@@ -193,11 +193,11 @@ const DayView = ({ selectedDate, events, setView }) => {
   //カテゴリによって色を変えて表示(ここも変更して、スケジュール記入の時と合わせる)
   const getEventClass = (category) => {
     switch (category) {
-      case 'part-time': return 'bg-red-300 border-red-600';
-      case 'school': return 'bg-blue-300 border-blue-600';
-      case 'personal': return 'bg-green-300 border-green-600';
-      case 'other': return 'bg-gray-300 border-gray-600';
-      default: return 'bg-gray-300 border-gray-600';
+      case 'part-time': return 'bg-rose-300 border-rose-600';
+      case 'school': return 'bg-sky-300 border-sky-600';
+      case 'personal': return 'bg-emerald-300 border-emerald-600';
+      case 'other': return 'bg-gray-200 border-gray-500';
+      default: return 'bg-gray-200 border-gray-500';
     }
   };
 
@@ -209,10 +209,10 @@ const DayView = ({ selectedDate, events, setView }) => {
     <div className="p-4">
       <div className="flex justify-between items-center mb-6">
         <button 
-          className="px-4 py-2 bg-gray-500 text-white rounded-lg shadow hover:bg-gray-600 transition-colors"
+          className="px-4 py-2 bg-gray-400 text-white rounded-lg shadow hover:bg-gray-500 transition-colors"
           onClick={() => setView('month')} // 月表示に戻る
         >
-          &lt; 月表示に戻る
+          &lt; に戻る
         </button>
         <h2 className="text-3xl font-bold text-gray-800">
           {selectedDate.getFullYear()}年 {selectedDate.getMonth() + 1}月{selectedDate.getDate()}日
@@ -337,8 +337,8 @@ function App() {
                     i === today.getDate();
     
     const dateClass = isToday
-      ? "bg-blue-500 text-white font-bold" 
-      : "hover:bg-blue-50 cursor-pointer";
+      ? "bg-sky-200 text-black font-bold" 
+      : "hover:bg-sky-50 cursor-pointer";
 
     dates.push(
       <div 
@@ -355,10 +355,10 @@ function App() {
           {dayEvents.slice(0, 2).map((event, index) => {
           const getCategoryClass = (category) => {
             switch (category) {
-              case 'part-time': return { bg: 'bg-red-200', text: 'text-red-800', border: 'border-red-600' };
-              case 'school': return { bg: 'bg-blue-200', text: 'text-blue-800', border: 'border-blue-600' };
-              case 'personal': return { bg: 'bg-green-200', text: 'text-green-800', border: 'border-green-600' };
-              case 'other': return { bg: 'bg-gray-200', text: 'text-gray-800', border: 'border-gray-600' };
+              case 'part-time': return { bg: 'bg-rose-200', text: 'text-rose-800', border: 'border-rose-600' };
+              case 'school': return { bg: 'bg-sky-200', text: 'text-sky-800', border: 'border-sky-600' };
+              case 'personal': return { bg: 'bg-emerald-200', text: 'text-emerald-800', border: 'border-emerald-600' };
+              case 'other': return { bg: 'bg-gray-100', text: 'text-gray-700', border: 'border-gray-500' };
               default: return { bg: 'bg-gray-200', text: 'text-gray-800', border: 'border-gray-600' };
               }
             };
@@ -416,7 +416,7 @@ function App() {
             {/* 1. ヘッダー (ナビゲーションボタン) */}
             <div className="flex justify-between items-center mb-6">
               <button 
-                className="px-4 py-2 bg-blue-500 text-white rounded-lg shadow hover:bg-blue-600 transition-colors"
+                className="px-4 py-2 bg-sky-400 text-white rounded-lg shadow hover:bg-sky-500 transition-colors"
                 onClick={handlePrevMonth}
               >
                 &lt; 前
@@ -425,7 +425,7 @@ function App() {
                 {year}年 {month + 1}月 
               </h2>
               <button 
-                className="px-4 py-2 bg-blue-500 text-white rounded-lg shadow hover:bg-blue-600 transition-colors"
+                className="px-4 py-2 bg-sky-400 text-white rounded-lg shadow hover:bg-sky-500 transition-colors"
                 onClick={handleNextMonth}
               >
                 次 &gt;
@@ -437,8 +437,8 @@ function App() {
               <button 
                 className={`px-3 py-1 text-sm rounded-full shadow-md transition-colors ${
                   isReadOnly 
-                    ? "bg-red-500 text-white hover:bg-red-600" 
-                    : "bg-green-500 text-white hover:bg-green-600"
+                    ? "bg-rose-400 text-white hover:bg-rose-500" 
+                    : "bg-emerald-400 text-white hover:bg-emerald-500"
                 }`}
                 onClick={() => setIsReadOnly(!isReadOnly)}
               >
@@ -448,9 +448,9 @@ function App() {
 
 
             {/* 2. 曜日グリッド */}
-            <div className="grid grid-cols-7 gap-2 text-center font-semibold text-gray-600 mb-2">
-              {weekdays.map(day => (
-                <div key={day} className="text-center">
+            <div className="grid grid-cols-7 gap-2 text-center font-semibold mb-2">
+              {weekdays.map((day, index) => (
+                <div key={day} className={`text-center ${index === 0 ? "text-rose-400" : index === 6 ? "text-sky-400" : "text-gray-600"}`}>
                   {day}
                 </div>
               ))}
