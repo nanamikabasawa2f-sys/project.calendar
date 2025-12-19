@@ -77,6 +77,8 @@ const EventModal = ({ selectedDate, events, setEvents, closeModal }) => {
     }
   };
 
+  
+
   //スケジュール記入の際に出てくるウィンドウの見た目のコード
   return (
     <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
@@ -183,7 +185,7 @@ const EventModal = ({ selectedDate, events, setEvents, closeModal }) => {
 
 
 
-const DayView = ({ selectedDate, events, setView }) => {
+const DayView = ({ selectedDate, events, setView, onDelete}) => {
   const dateKey = `${selectedDate.getFullYear()}-${selectedDate.getMonth() + 1}-${selectedDate.getDate()}`;
   const dayEvents = events[dateKey] || [];
   
@@ -207,75 +209,90 @@ const DayView = ({ selectedDate, events, setView }) => {
   };
 
   // 1時間あたりの高さ（px）。見た目に合わせて調整してください
-  const hourHeight = 64;
+  const hourHeight = 40;
 
-  //表示モードで日にちをクリックした時の見た目を設定しているコード
+  
+// 表示モードで日にちをクリックした時の見た目を設定しているコード
   return (
     <div className="p-4">
       <div className="flex justify-between items-center mb-6">
         <button 
           className="px-4 py-2 bg-gray-500 text-white rounded-lg shadow hover:bg-gray-600 transition-colors"
-          onClick={() => setView('month')} // 月表示に戻る
+          onClick={() => setView('month')} 
         >
           &lt; 月表示に戻る
         </button>
-        <h2 className="text-3xl font-bold text-gray-800">
+        <h2 className="text-xl font-bold text-gray-800">
           {selectedDate.getFullYear()}年 {selectedDate.getMonth() + 1}月{selectedDate.getDate()}日
         </h2>
-        <div></div> {/* スペーサー */}
+        <div></div>
       </div>
 
       <h3 className="text-xl font-semibold mb-3">終日イベント</h3>
       <div className="mb-6 space-y-2">
         {allDayEvents.length > 0 ? (
           allDayEvents.map(event => (
-
-            <div key={event.id} className={`p-2 rounded font-bold ${getEventClass(event.category)}`}>
-              {event.title} (終日)
+            <div key={event.id} className={`p-2 rounded font-bold ${getEventClass(event.category)} flex justify-between items-center`}>
+              <span>{event.title} (終日)</span>
+              {/* 削除ボタンを追加 */}
+              <button onClick={() => onDelete(dateKey, event.id)} className="ml-2 hover:text-red-600">🗑️</button>
             </div>
           ))
         ) : (
-<>
-  <p className="text-gray-500">終日イベントはありません</p>
-  <h3 className="text-xl font-semibold mb-3">時間スケジュール (1時間刻み)</h3>
-  <div className="border border-gray-200 rounded-lg overflow-hidden">
-    {/* 全体高さを24時間分に設定、相対位置基準にする */}
-    <div className="relative" style={{ height: `${hourHeight * 24}px` }}>
-      {/* 時間行（ラベルと罫線）を描画 */}
-      {timeSlots.map(slot => (
-        <div key={`row-${slot}`} style={{ height: `${hourHeight}px` }} className="flex border-b border-gray-100">
-          <div className="w-20 text-right p-2 text-sm text-gray-500 border-r border-gray-200">
-            {slot}
+          <p className="text-gray-500">終日イベントはありません</p>
+        )}
+      </div>
+
+      <h3 className="text-xl font-semibold mb-3">時間スケジュール (1時間刻み)</h3>
+      
+      {/* ★ ここに「スクロール用の窓」を追加しました ★ */}
+      <div className="border border-gray-200 rounded-lg overflow-hidden">
+        <div className="max-h-[400px] overflow-y-auto bg-white custom-scrollbar">
+          
+          {/* --- ここから下のロジックは一切変えていません --- */}
+          <div className="relative" style={{ height: `${hourHeight * 24}px` }}>
+            {timeSlots.map(slot => (
+              <div key={`row-${slot}`} style={{ height: `${hourHeight}px` }} className="flex border-b border-gray-100">
+                <div className="w-20 text-right p-2 text-sm text-gray-500 border-r border-gray-200">
+                  {slot}
+                </div>
+                <div className="flex-1 p-2" />
+              </div>
+            ))}
+
+            {timeEvents.map(event => {
+              const [sh, sm] = event.start.split(':').map(Number);
+              const [eh, em] = event.end.split(':').map(Number);
+              const startMinutes = sh * 60 + sm;
+              const endMinutes = eh * 60 + em;
+              const top = (startMinutes / 60) * hourHeight;
+              const height = Math.max((endMinutes - startMinutes) / 60 * hourHeight, 20);
+
+              return (
+                <div
+                  key={event.id}
+                  className={`absolute left-20 right-2 p-2 rounded text-sm border-l-4 font-medium ${getEventClass(event.category)} flex justify-between items-start group`}
+                  style={{ top: `${top}px`, height: `${height}px`, overflow: 'hidden' }}
+                >
+                  <div className="truncate">
+                    <div className="font-semibold text-sm truncate">{event.title}</div>
+                    <div className="text-xs text-gray-700">{event.start} - {event.end}</div>
+                  </div>
+                  {/* 時間指定予定にも削除ボタンを追加 */}
+                  <button 
+                    onClick={(e) => { e.stopPropagation(); onDelete(dateKey, event.id); }}
+                    className="opacity-0 group-hover:opacity-100 p-1 hover:text-red-600 transition-opacity"
+                  >
+                    🗑️
+                  </button>
+                </div>
+              );
+            })}
           </div>
-          <div className="flex-1 p-2" /> {/* 空白（イベントは絶対配置する） */}
+          {/* --- ここまでロジック維持 --- */}
+
         </div>
-      ))}
-
-      {/* イベントを絶対配置で一度だけ描画（またがる場合は高さで表現） */}
-      {timeEvents.map(event => {
-        const [sh, sm] = event.start.split(':').map(Number);
-        const [eh, em] = event.end.split(':').map(Number);
-
-        const startMinutes = sh * 60 + sm;
-        const endMinutes = eh * 60 + em;
-        const top = (startMinutes / 60) * hourHeight;
-        const height = Math.max((endMinutes - startMinutes) / 60 * hourHeight, 20); // 最小高さを確保
-
-        return (
-          <div
-            key={event.id}
-            className={`absolute left-20 right-2 p-2 rounded text-sm border-l-4 font-medium ${getEventClass(event.category)}`}
-            style={{ top: `${top}px`, height: `${height}px`, overflow: 'hidden' }}
-          >
-            <div className="font-semibold text-sm truncate">{event.title}</div>
-            <div className="text-xs text-gray-700">{event.start} - {event.end}</div>
-          </div>
-        );
-      })}
-    </div>
-  </div>
-</>
-        )}</div>
+      </div>
     </div>
   );
 };
@@ -283,257 +300,177 @@ const DayView = ({ selectedDate, events, setView }) => {
 //ななみやったよ^ ^
 //全体のアプリケーション表示に関するコード(月のカレンダーの画面のコード)
 function App() {
-  const handleLogin = async () => {
-  // Firebaseの認証機能を読み込む
-  const { GoogleAuthProvider, signInWithPopup } = await import('firebase/auth');
-  const provider = new GoogleAuthProvider();
-  
-  try {
-    // ポップアップを出してGoogleログインを実行
-    await signInWithPopup(auth, provider);
-  } catch (error) {
-    console.error("ログインエラー:", error);
-    alert("ログインに失敗しました。もう一度試してください。");
-  }
-};
-  const [user, setUser] = useState(null);
-useEffect(() => {
+  // --- 1. 状態（State）の定義 ---
+  const [user, setUser] = useState(null); // ログインユーザー情報
+  const [bgColor, setBgColor] = useState('from-pink-50 to-orange-50');
+  const [events, setEvents] = useState({}); // すべての予定データ
+  const [currentDate, setCurrentDate] = useState(new Date(2025, 11, 19)); // 表示中の月
+  const [showModal, setShowModal] = useState(false); // モーダルの開閉
+  const [selectedDate, setSelectedDate] = useState(null); // 選択された日付
+  const [view, setView] = useState('month'); // 'month' または 'day' 表示
+  const [isReadOnly, setIsReadOnly] = useState(false); // 編集モードの切り替え
+
+  // --- 2. ログイン状態の監視 ---
+  useEffect(() => {
+    // Firebaseがログイン状況を教えてくれる
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      setUser(currentUser); // ここで setUser を使うので警告が消えます
+      setUser(currentUser);
     });
     return () => unsubscribe();
   }, []);
 
-useEffect(() => {
-  let unsubscribe;
-  
-  if (user) {
-    // ここで subscribeToEvents を呼び出します！
-    // これでインポート部分が「光り」、警告も消えます。
-    unsubscribe = subscribeToEvents(user.uid, (loadedEvents) => {
-      setEvents(loadedEvents); // 届いたデータをカレンダーにセット
-    });
-  } else {
-    setEvents({}); // ログアウト時は空にする
-  }
-
-  // 画面を閉じたりしたときにお掃除する設定
-  return () => {
-    if (unsubscribe) unsubscribe();
-  };
-}, [user]); // user（ログイン状態）が変わるたびに実行
-
-  const [currentDate, setCurrentDate] = useState(new Date(2025, 10, 1)); // 2025/11/1
-  const [events, setEvents] = useState({}); // { '2025-11-21': [{...}, {...}] }
-  const [isReadOnly, setIsReadOnly] = useState(false);
-  
-  const [showModal, setShowModal] = useState(false); // モーダルの表示・非表示
-  const [selectedDate, setSelectedDate] = useState(null); // クリックされた日付
-
-  // ビューの切り替え: 'month' (月表示) または 'day' (日表示)
-  const [view, setView] = useState('month');
-
-
-  // --- ナビゲーション関数 ---
-  const handleNextMonth = () => {
-    const nextDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1);
-    setCurrentDate(nextDate);
-  };
-  const handlePrevMonth = () => {
-    const prevDate = new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1);
-    setCurrentDate(prevDate);
-  };
-
-  // --- 日付クリック時の処理 ---
-  const handleDateClick = (date) => {
-    if (isReadOnly) {
-      // 表示専用モードの場合、日表示に切り替え
-      setSelectedDate(date);
-      setView('day');
+  // --- 3. データのリアルタイム読み取り ---
+  useEffect(() => {
+    let unsubscribe;
+    if (user) {
+      // ログインしている時だけ、その人のデータをFirebaseから持ってくる
+      unsubscribe = subscribeToEvents(user.uid, (loadedEvents) => {
+        setEvents(loadedEvents);
+      });
     } else {
-      // 編集可能モードの場合、モーダルを開く
-      setSelectedDate(date);
-      setShowModal(true);
+      setEvents({}); // ログアウト時は空にする
     }
-  }
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
+  }, [user]);
 
-  // --- 月表示ロジック (既存) ---
+  // --- 4. 各種アクション関数 ---
+  
+  // ログインボタンを押した時
+  const handleLogin = async () => {
+    const { GoogleAuthProvider, signInWithPopup } = await import('firebase/auth');
+    try {
+      await signInWithPopup(auth, new GoogleAuthProvider());
+    } catch (error) {
+      console.error("ログイン失敗:", error);
+    }
+  };
+
+  // 予定を削除する時
+  const handleDeleteEvent = async (dateKey, eventId) => {
+    if (!window.confirm("この予定を削除しますか？")) return;
+    try {
+      const { doc, deleteDoc } = await import('firebase/firestore');
+      // users / [UID] / events / [イベントID] を指定して削除
+      await deleteDoc(doc(db, "users", user.uid, "events", eventId));
+    } catch (error) {
+      console.error("削除失敗:", error);
+    }
+  };
+
+  // カレンダー操作
+  const handlePrevMonth = () => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
+  const handleNextMonth = () => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
+  
+  const handleDateClick = (date) => {
+    setSelectedDate(date);
+    if (isReadOnly) {
+      setView('day'); // 表示モードなら詳細へ
+    } else {
+      setShowModal(true); // 編集モードなら入力画面へ
+    }
+  };
+
+  // --- 5. カレンダーのマス目（日付）を作るロジック ---
   const year = currentDate.getFullYear();
-  const month = currentDate.getMonth(); 
-
-  const firstDayOfMonth = new Date(year, month, 1);
-  const lastDayOfMonth = new Date(year, month + 1, 0);
-  const startDayOfWeek = firstDayOfMonth.getDay(); 
-
+  const month = currentDate.getMonth();
+  const firstDay = new Date(year, month, 1).getDay();
+  const lastDay = new Date(year, month + 1, 0).getDate();
   const dates = [];
-  // (a) 月の始まる前の「空白」を埋める
-  for (let i = 0; i < startDayOfWeek; i++) {
-    dates.push(<div key={`empty-${i}`} className="border rounded-lg p-3 h-24 bg-gray-50"></div>);
+
+  for (let i = 0; i < firstDay; i++) {
+    dates.push(<div key={`empty-${i}`} className="h-20 bg-gray-50 border rounded-lg" />);
   }
-
-  // (b) 1日から最後の日までを埋める
-  for (let i = 1; i <= lastDayOfMonth.getDate(); i++) {
-    const date = new Date(year, month, i);
-    const dateKey = `${year}-${month + 1}-${i}`;
-    const dayEvents = events[dateKey] || [];
-
-    const today = new Date();
-    const isToday = year === today.getFullYear() &&
-                    month === today.getMonth() &&
-                    i === today.getDate();
-    
-    const dateClass = isToday
-      ? "bg-blue-500 text-white font-bold" 
-      : "hover:bg-blue-50 cursor-pointer";
-
+  for (let i = 1; i <= lastDay; i++) {
+    const d = new Date(year, month, i);
+    const key = `${year}-${month + 1}-${i}`;
+    const dayEvents = events[key] || [];
     dates.push(
       <div 
-        key={`date-${i}`} 
-        className={`border rounded-lg p-3 h-24 transition-colors ${dateClass}`}
-        onClick={() => handleDateClick(date)}
+        key={i} 
+        onClick={() => handleDateClick(d)} 
+        className="h-20 border rounded-lg p-1 hover:bg-blue-50 cursor-pointer overflow-hidden"
       >
-        <p className="text-xs font-bold">
-          {i}
-        </p>
-        
-        {/* ★ 予定の表示 ★ */}
-        <div className="mt-1 space-y-0.5">
-          {dayEvents.slice(0, 2).map((event, index) => {
-          const getCategoryClass = (category) => {
-            switch (category) {
-              case 'part-time': return { bg: 'bg-red-200', text: 'text-red-800', border: 'border-red-600' };
-              case 'school': return { bg: 'bg-blue-200', text: 'text-blue-800', border: 'border-blue-600' };
-              case 'personal': return { bg: 'bg-green-200', text: 'text-green-800', border: 'border-green-600' };
-              case 'other': return { bg: 'bg-gray-200', text: 'text-gray-800', border: 'border-gray-600' };
-              default: return { bg: 'bg-gray-200', text: 'text-gray-800', border: 'border-gray-600' };
-              }
-            };
-            const classes = getCategoryClass(event.category);
-            return (
-              <div 
-                key={index} 
-                className={`text-xs px-1 rounded truncate w-full 
-                  ${classes.bg} ${classes.text}
-                `}
-              >
-                {event.title}
-              </div>
-            );
-          })}
-          {dayEvents.length > 2 && (
-            <div className="text-xs text-gray-500">他 {dayEvents.length - 2}件</div>
-          )}
-        </div>
-        
+        <span className="text-xs font-bold">{i}</span>
+        {dayEvents.slice(0, 2).map((e, idx) => (
+          <div key={idx} className="text-[10px] bg-blue-100 truncate px-1 rounded mb-0.5">{e.title}</div>
+        ))}
       </div>
     );
   }
-  
-  
 
-  const weekdays = ["日", "月", "火", "水", "木", "金", "土"];
-  
-  // --- メインレンダリング ---
-return (
-    <div className="min-h-screen bg-gray-100 p-8 flex items-center justify-center"> 
+  // --- 6. 画面の見た目（JSX） ---
+  return (
+    
+    <div className={`min-h-screen bg-gradient-to-br ${bgColor} flex items-center justify-center p-4 transition-all duration-500`}>
       {!user ? (
-        /* --- ログインしていない時に表示されるカード --- */
-        <div className="bg-white p-10 rounded-2xl shadow-xl max-w-sm w-full text-center">
-          <h2 className="text-2xl font-bold mb-6 text-gray-800">~共有しやすいカレンダー~</h2>
-          <p className="text-gray-500 mb-8">ログインしよう!!</p>
-          
-          <button 
-            onClick={handleLogin} // 前に作ったログイン関数を呼ぶ
-            className="w-full flex items-center justify-center px-4 py-3 border border-gray-300 rounded-lg shadow-sm bg-white hover:bg-gray-50 transition-all font-medium text-gray-700"
-          >
-            <img 
-              src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" 
-              alt="Google" 
-              className="w-5 h-5 mr-3" 
-            />
+        /* ログインしていない時の画面 */
+        <div className="bg-white p-10 rounded-3xl shadow-xl text-center max-w-sm w-full">
+          <h2 className="text-2xl font-bold mb-6">🗓️ My Calendar</h2>
+          <button onClick={handleLogin} className="w-full py-3 border rounded-xl hover:bg-gray-50 flex items-center justify-center gap-2 font-bold">
+            <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" className="w-5 h-5" alt="G" />
             Googleでサインイン
           </button>
         </div>
-        ) : (
-          /* --- ログインしていたら、元々のコードをそのまま表示 --- */
-          <div className="container mx-auto p-6 max-w-xl bg-white rounded-xl shadow-lg">
-            {/* ログアウトボタンだけひっそり追加しておくと便利です */}
-            <button onClick={() => auth.signOut()} className="text-xs text-gray-400 mb-2 underline">ログアウト</button>
+      ) : (
+        /* ログインしている時の画面 */
+        <div className="bg-white p-6 rounded-3xl shadow-2xl w-full max-w-md">
           
-        {/* モーダル表示 */}
-        {showModal && (
-          <EventModal 
-            selectedDate={selectedDate} 
-            events={events}
-            setEvents={setEvents}
-            closeModal={() => setShowModal(false)}
-          />
-        )}
-        
-        {/* DayView (日表示) の表示 */}
-        {view === 'day' && selectedDate ? (
-          <DayView 
-            selectedDate={selectedDate} 
-            events={events}
-            setView={setView}
-          />
-        ) : (
-          // MonthView (月表示) の表示
-          <div className="month-view">
-            
-            {/* 1. ヘッダー (ナビゲーションボタン) */}
-            <div className="flex justify-between items-center mb-6">
-              <button 
-                className="px-4 py-2 bg-blue-500 text-white rounded-lg shadow hover:bg-blue-600 transition-colors"
-                onClick={handlePrevMonth}
-              >
-                &lt; 前
-              </button>
-              <h2 className="text-3xl font-bold text-gray-800">
-                {year}年 {month + 1}月 
-              </h2>
-              <button 
-                className="px-4 py-2 bg-blue-500 text-white rounded-lg shadow hover:bg-blue-600 transition-colors"
-                onClick={handleNextMonth}
-              >
-                次 &gt;
-              </button>
+          {/* 右上の可愛いプロフィール表示 */}
+          <div className="flex justify-between items-center mb-6 bg-pink-50/50 p-3 rounded-2xl">
+            <div className="flex items-center space-x-3">
+              <img src={user.photoURL} className="w-10 h-10 rounded-full border-2 border-white shadow-sm" alt="u" />
+              <div>
+                <p className="text-[10px] text-pink-400 font-bold uppercase">Welcome</p>
+                <p className="text-sm font-bold text-gray-700">{user.displayName} さん</p>
+              </div>
             </div>
-            
-            {/* 📝 表示専用ボタンの追加 */}
-            <div className="flex justify-end mb-4">
-              <button 
-                className={`px-3 py-1 text-sm rounded-full shadow-md transition-colors ${
-                  isReadOnly 
-                    ? "bg-red-500 text-white hover:bg-red-600" 
-                    : "bg-green-500 text-white hover:bg-green-600"
-                }`}
-                onClick={() => setIsReadOnly(!isReadOnly)}
-              >
-                {isReadOnly ? "表示専用モード" : "編集可能モード"}
-              </button>
-            </div>
-
-
-            {/* 2. 曜日グリッド */}
-            <div className="grid grid-cols-7 gap-2 text-center font-semibold text-gray-600 mb-2">
-              {weekdays.map(day => (
-                <div key={day} className="text-center">
-                  {day}
-                </div>
-              ))}
-            </div>
-
-            {/* 3. 日付グリッド */}
-            <div className="grid grid-cols-7 gap-2">
-              {dates} 
-            </div>
+            <button onClick={() => auth.signOut()} className="text-[10px] text-gray-400 underline hover:text-red-400">Logout</button>
           </div>
-        )}
+          <div className="flex gap-2 mb-4 overflow-x-auto pb-2 px-1">
+            <button onClick={() => setBgColor('from-pink-50 to-orange-50')} className="w-6 h-6 rounded-full bg-gradient-to-br from-pink-200 to-orange-200 border-2 border-white shadow-sm" />
+            <button onClick={() => setBgColor('from-blue-50 to-cyan-50')} className="w-6 h-6 rounded-full bg-gradient-to-br from-blue-200 to-cyan-200 border-2 border-white shadow-sm" />
+            <button onClick={() => setBgColor('from-green-50 to-teal-50')} className="w-6 h-6 rounded-full bg-gradient-to-br from-green-200 to-teal-200 border-2 border-white shadow-sm" />
+            <button onClick={() => setBgColor('from-purple-50 to-indigo-50')} className="w-6 h-6 rounded-full bg-gradient-to-br from-purple-200 to-indigo-200 border-2 border-white shadow-sm" />
+            <button onClick={() => setBgColor('from-gray-700 to-gray-900')} className="w-6 h-6 rounded-full bg-gradient-to-br from-gray-600 to-gray-800 border-2 border-white shadow-sm" />
+          </div>
+          
 
-      </div>
-    )}
-      {/* --- 出し分けここまで --- */}
+          {showModal && (
+            <EventModal 
+              selectedDate={selectedDate} 
+              closeModal={() => setShowModal(false)} 
+            />
+          )}
+          
+          {view === 'day' ? (
+            <DayView 
+              selectedDate={selectedDate} 
+              events={events} 
+              setView={setView} 
+              onDelete={handleDeleteEvent} 
+            />
+          ) : (
+            <div>
+              <div className="flex justify-between items-center mb-4">
+                <button onClick={handlePrevMonth}>◀︎</button>
+                <h3 className="font-bold text-lg">{year}年 {month + 1}月</h3>
+                <button onClick={handleNextMonth}>▶︎</button>
+              </div>
+              <div className="flex justify-end mb-2">
+                <button onClick={() => setIsReadOnly(!isReadOnly)} className={`text-[10px] px-3 py-1 rounded-full text-white ${isReadOnly ? 'bg-red-400' : 'bg-blue-400'}`}>
+                  {isReadOnly ? '表示モード' : '編集モード'}
+                </button>
+              </div>
+              <div className="grid grid-cols-7 gap-1 text-center text-[10px] font-bold text-gray-400 mb-2">
+                {["日","月","火","水","木","金","土"].map(w => <div key={w}>{w}</div>)}
+              </div>
+              <div className="grid grid-cols-7 gap-1">{dates}</div>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
