@@ -2,25 +2,20 @@ import React, { useState } from 'react';
 import './index.css';
 
 
-const EventModal = ({ selectedDate, events, setEvents, closeModal }) => {
+const EventModal = ({ selectedDate, events, setEvents, closeModal, categoryModal, categoryOptions }) => {
 
   const [title, setTitle] = useState('');
   const [eventType, setEventType] = useState('all-day'); 
   const [startTime, setStartTime] = useState('09:00');
   const [endTime, setEndTime] = useState('10:00');
-  const [category, setCategory] = useState('personal');
+  const [category, setCategory] = useState(categoryOptions[0]?.value || 'personal');
 
   if (!selectedDate) return null;
 
   const dateKey = `${selectedDate.getFullYear()}-${selectedDate.getMonth() + 1}-${selectedDate.getDate()}`;
 
   //カテゴリの記入(ここを変更してカテゴリの記入をアプリ上でできるようにしたい)
-  const categoryOptions = [
-    { value: 'part-time', label: 'バイト', bgColor: 'bg-rose-400' },      // バイトは赤
-    { value: 'school', label: '学校の予定', bgColor: 'bg-sky-400' },   // 学校は青
-    { value: 'personal', label: 'プライベート', bgColor: 'bg-emerald-400' }, // プライベートは緑
-    { value: 'other', label: 'その他', bgColor: 'bg-gray-400' },        // その他は灰色
-  ];
+
 
   // 00:00 から 23:30 までの30分刻みの時間オプションを生成
   //1分刻みに変更　(11/28 長谷部)
@@ -142,6 +137,13 @@ const EventModal = ({ selectedDate, events, setEvents, closeModal }) => {
             {option.label}
           </button>
         ))}
+        {/*  カテゴリ追加コード  (12/19)*/}
+        <button
+          onClick={() =>categoryModal()}
+          className="flex items-center p-2 rounded-full text-sm bg-gray-300 hover:bg-gray-400 transition-colors text-gray-700 font-bold" 
+        >
+          + 追加
+        </button>
       </div>
     </div>
 
@@ -164,9 +166,89 @@ const EventModal = ({ selectedDate, events, setEvents, closeModal }) => {
   );
 };
 
+///カテゴリ追加用モーダル
+const CategoryAddModal = ({ closeModal, onAddCategory }) => {
+  const [newCategoryName, setNewCategoryName] = useState('');
+  const [newCategoryColor, setNewCategoryColor] = useState('bg-purple-400');
+
+  const colorOptions = [
+    { value: 'bg-rose-400', label: '  ' },
+    { value: 'bg-orange-300', label: '  ' },
+    { value: 'bg-yellow-300', label: '  ' },
+    { value: 'bg-emerald-300', label: '  ' },
+    { value: 'bg-cyan-300', label: '  ' },
+    { value: 'bg-sky-400', label: '  ' },
+    { value: 'bg-purple-300', label: '  ' },
+    { value: 'bg-pink-300', label: '  ' },
+  ];
+
+  const handleAddCategory = () => {
+    if (!newCategoryName.trim()) {
+      alert('カテゴリ名を入力してください');
+      return;
+    }
+    onAddCategory(newCategoryName, newCategoryColor);
+    setNewCategoryName('');
+    setNewCategoryColor('bg-purple-400');
+    closeModal();
+  };
+
+  return (
+    <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white p-6 rounded-lg shadow-xl w-full max-w-md">
+        <h3 className="text-xl font-bold mb-4">新しいカテゴリを追加</h3>
+        
+        <div className="mb-4">
+          <label className="block text-gray-700 font-bold mb-2">カテゴリ名</label>
+          <input
+            type="text"
+            className="w-full p-2 border rounded"
+            value={newCategoryName}
+            onChange={(e) => setNewCategoryName(e.target.value)}
+          />
+        </div>
+
+        <div className="mb-6">
+          <label className="block text-gray-700 font-bold mb-2">色を選択</label>
+          <div className="flex flex-wrap gap-2">
+            {colorOptions.map(option => (
+              <button
+                key={option.value}
+                onClick={() => setNewCategoryColor(option.value)}
+                className={`flex items-center p-4 rounded-full text-sm transition-shadow ${option.value} ${
+                  newCategoryColor === option.value ? 'ring-4 ring-offset-2 ring-gray-400' : ''
+                }`}
+                style={{ color: 'white' }}
+                title={option.label}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="flex justify-end space-x-4">
+          <button
+            className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300"
+            onClick={closeModal}
+          >
+            キャンセル
+          </button>
+          <button
+            className="px-4 py-2 bg-sky-500 text-white rounded hover:bg-sky-600"
+            onClick={handleAddCategory}
+          >
+            追加
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+///カテゴリ追加用モーダル
 
 
-const DayView = ({ selectedDate, events, setView }) => {
+const DayView = ({ selectedDate, events, setView, categoryOptions }) => {
   const dateKey = `${selectedDate.getFullYear()}-${selectedDate.getMonth() + 1}-${selectedDate.getDate()}`;
   const dayEvents = events[dateKey] || [];
   
@@ -275,6 +357,17 @@ function App() {
   // ビューの切り替え: 'month' (月表示) または 'day' (日表示)
   const [view, setView] = useState('month');
 
+  const [showCategoryModal, setShowCategoryModal] = useState(false);
+
+  // ★ 12/19 ★
+  const [categoryOptions, setCategoryOptions] = useState([
+    { value: 'part-time', label: 'バイト', bgColor: 'bg-rose-400' },
+    { value: 'school', label: '学校の予定', bgColor: 'bg-sky-400' },
+    { value: 'personal', label: 'プライベート', bgColor: 'bg-emerald-400' },
+    { value: 'other', label: 'その他', bgColor: 'bg-gray-400' },
+  ]);
+  // ★ 12/19 ★
+
 
   // --- ナビゲーション関数 ---
   const handleNextMonth = () => {
@@ -285,6 +378,16 @@ function App() {
     const prevDate = new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1);
     setCurrentDate(prevDate);
   };
+
+  // ★ 12/19 ★
+  const handleAddCategory = (name, color) => {
+    const newValue = `custom-${Date.now()}`;
+    setCategoryOptions([
+      ...categoryOptions,
+      { value: newValue, label: name, bgColor: color }
+    ]);
+  };
+  // ★ 12/19 ★
 
   // --- 日付クリック時の処理 ---
   const handleDateClick = (date) => {
@@ -387,8 +490,19 @@ function App() {
             events={events}
             setEvents={setEvents}
             closeModal={() => setShowModal(false)}
+            categoryModal={() => setShowCategoryModal(true)}
+            categoryOptions={categoryOptions} //12/19
           />
         )}
+
+        {/* ★ 12/19 ★ */}
+        {showCategoryModal && (
+          <CategoryAddModal 
+            closeModal={() => setShowCategoryModal(false)}
+            onAddCategory={handleAddCategory}
+          />
+        )}
+        {/* ★ 12/19 ★ */}    
         
         {/* DayView (日表示) の表示 */}
         {view === 'day' && selectedDate ? (
@@ -396,6 +510,7 @@ function App() {
             selectedDate={selectedDate} 
             events={events}
             setView={setView}
+            categoryOptions={categoryOptions}
           />
         ) : (
           // MonthView (月表示) の表示
