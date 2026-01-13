@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import './index.css';
 
 // ====================================================================
-// 1. EventModal: 予定入力用のモーダルコンポーネント
+// . EventModal: 予定入力用のモーダルコンポーネント
 // ====================================================================
 
 const EventModal = ({ selectedDate, events, setEvents, closeModal }) => {
