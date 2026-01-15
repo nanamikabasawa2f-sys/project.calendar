@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { auth, db } from './firebase'; // 作ったファイルをインポート
 import { onAuthStateChanged } from 'firebase/auth';
 import { subscribeToEvents } from './dbService';
-import { collection, onSnapshot, addDoc } from 'firebase/firestore';
+import { collection, onSnapshot, addDoc, doc, setDoc } from 'firebase/firestore';
 import './index.css';
 
 const StartPage = ({
@@ -46,6 +46,435 @@ const StartPage = ({
     </div>
   );
 };
+
+const ScheduleListPage = ({ user, onBack, setSchedules, schedules, setSelectedScheduleId, setPage }) => {
+  const [showCreate, setShowCreate] = useState(false);
+
+  return (
+    <div className="bg-white p-6 rounded-3xl shadow-xl w-full max-w-md">
+      <h2 className="text-xl font-bold mb-4">日程調整</h2>
+
+      <button
+        onClick={() => setShowCreate(true)}
+        className="w-full py-3 rounded-xl bg-pink-400 text-white font-bold mb-4"
+      >
+        ＋ 新しく作る
+      </button>
+
+      {showCreate && (
+        <CreateScheduleModal
+          user={user}
+          onClose={() => setShowCreate(false)}
+          setSchedules={setSchedules}
+        />
+      )}
+
+      <h3 className="font-bold mb-2">作成済みイベント</h3>
+      <div className="space-y-2">
+        {Object.values(schedules).length === 0 && (
+          <p className="text-gray-500 text-sm">まだイベントがありません</p>
+        )}
+
+        {Object.values(schedules).map(schedule => (
+          <div key={schedule.id} className="p-3 border rounded-lg flex justify-between items-center">
+            <div>
+              <p className="font-bold">{schedule.title}</p>
+              <p className="text-sm text-gray-500">{schedule.startDate} 〜 {schedule.endDate}</p>
+              <p className="text-xs text-gray-400">締切: {schedule.deadline}</p>
+            </div>
+            <button
+              onClick={() => {
+                // 回答ページに遷移
+                setSelectedScheduleId(schedule.id);
+                setPage("respond");
+              }}
+              className="px-3 py-1 bg-blue-400 text-white rounded"
+            >
+              回答する
+            </button>
+                <button
+            onClick={() => {
+              setSelectedScheduleId(schedule.id);
+              setPage("summary");
+            }}
+            className="px-3 py-1 bg-green-400 text-white rounded"
+          >
+            回答一覧を見る
+          </button>
+          </div>
+        ))}
+      </div>
+
+      <button
+        onClick={onBack}
+        className="w-full py-2 mt-4 rounded-xl bg-gray-200 font-bold"
+      >
+        戻る
+      </button>
+    </div>
+  );
+};
+
+
+
+const CreateScheduleModal = ({ user, onClose, setEvents, setSchedules }) => {
+  const [eventName, setEventName] = useState("");
+  const [yourName, setYourName] = useState("");
+  const [startDate, setStartDate] = useState(""); // yyyy-mm-dd
+  const [endDate, setEndDate] = useState("");
+  const [deadline, setDeadline] = useState("");
+  
+
+  const handleCreate = async () => {
+    if (!eventName || !yourName || !startDate || !endDate || !deadline) return;
+
+    try {
+      const newSchedule = {
+        title: eventName,
+        owner: yourName,
+        ownerUid: user.uid,
+        startDate,
+        endDate,
+        deadline,
+        createdAt: new Date(),
+      };
+
+      // Firestore に保存
+      const docRef = await addDoc(collection(db, "scheduleEvents"), newSchedule);
+
+      alert(`イベント作成完了！URL: /schedule/${docRef.id}`);
+      setSchedules(prev => ({
+        ...prev,
+        [docRef.id]: { ...newSchedule, id: docRef.id, responses: {} }
+      }));
+
+      onClose();
+    } catch (error) {
+      console.error("Firestore書き込みエラー:", error);
+      alert("保存できません。権限設定を確認してください。");
+    }
+  };
+
+  
+  return (
+    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+      <div className="bg-white p-6 rounded-2xl w-full max-w-sm">
+        <h3 className="font-bold mb-4">日程調整を作成</h3>
+        <input placeholder="イベント名" value={eventName} onChange={e => setEventName(e.target.value)} className="w-full mb-2 border p-2 rounded" />
+        <input placeholder="名前" value={yourName} onChange={e => setYourName(e.target.value)} className="w-full mb-2 border p-2 rounded" />
+        <label>開始日</label>
+        <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className="w-full mb-2 border p-2 rounded" />
+        <label>終了日</label>
+        <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className="w-full mb-2 border p-2 rounded" />
+        <label>回答期限</label>
+        <input type="date" value={deadline} onChange={e => setDeadline(e.target.value)} className="w-full mb-4 border p-2 rounded" />
+
+        <div className="flex gap-3">
+          <button onClick={onClose} className="flex-1 bg-gray-200 rounded py-2">キャンセル</button>
+          <button onClick={handleCreate} className="flex-1 bg-pink-400 text-white rounded py-2">作成</button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+
+
+const RespondSchedule = ({ schedule, onSubmit }) => {
+  const [userName, setUserName] = useState("");
+
+  // 日付リストを作る
+  const dates = [];
+  let current = new Date(schedule.startDate);
+  const end = new Date(schedule.endDate);
+  while (current <= end) {
+    const key = `${current.getFullYear()}-${current.getMonth() + 1}-${current.getDate()}`;
+    dates.push(key);
+    current.setDate(current.getDate() + 1);
+  }
+
+  // 2時間刻み
+  const hours = Array.from({ length: 12 }, (_, i) => {
+    const h = i * 2;
+    return h.toString().padStart(2, "0") + ":00~";
+  });
+
+  // answers を useState で初期化
+  const [answers, setAnswers] = useState(() => {
+    const defaultX = ["22:00~", "24:00~", "00:00~", "02:00~", "04:00~", "06:00~"];
+    const initial = {};
+    dates.forEach(date => {
+      initial[date] = {};
+      hours.forEach(hour => {
+        initial[date][hour] = defaultX.includes(hour) ? "×" : "◯";
+      });
+    });
+    return initial;
+  });
+
+  const handleClickSlot = (date, hour) => {
+    const current = answers[date]?.[hour];
+    const next = current === "◯" ? "△" : current === "△" ? "×" : "◯";
+
+    setAnswers(prev => ({
+      ...prev,
+      [date]: { ...prev[date], [hour]: next }
+    }));
+  };
+
+  const handleSubmit = async () => {
+    if (!userName.trim()) {
+      alert("名前を入力してください");
+      return;
+    }
+
+    try {
+      const responseRef = doc(db, "scheduleEvents", schedule.id, "responses", userName);
+      await setDoc(responseRef, { answers });
+
+      // ローカル State も更新
+      onSubmit(userName, answers);
+      alert("回答ありがとうございました！");
+    } catch (error) {
+      console.error("回答保存エラー:", error);
+      alert("保存できませんでした。権限設定を確認してください。");
+    }
+  };
+
+
+  const getCellColor = (val) => {
+    if (val === "◯") return "bg-green-400 text-white";
+    if (val === "△") return "bg-yellow-400 text-white";
+    if (val === "×") return "bg-red-400 text-white";
+    return "bg-gray-100";
+  };
+
+  return (
+    <div className="bg-white p-6 rounded-xl shadow-lg max-w-4xl mx-auto overflow-x-auto">
+      <h2 className="text-xl font-bold mb-4">{schedule.title}</h2>
+
+      <input
+        placeholder="名前"
+        value={userName}
+        onChange={e => setUserName(e.target.value)}
+        className="w-full p-2 border rounded mb-4"
+      />
+
+      <table className="table-auto border-collapse border border-gray-300 w-full text-center text-xs">
+        <thead>
+          <tr className="bg-gray-100">
+            <th className="border border-gray-300 px-2 py-1">日付 / 時間</th>
+            {hours.map(hour => (
+              <th key={hour} className="border border-gray-300 px-2 py-1">{hour}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {dates.map(date => (
+            <tr key={date}>
+              <td className="border border-gray-300 px-2 py-1 font-semibold">{date}</td>
+              {hours.map(hour => {
+                const val = answers[date][hour];
+                return (
+                  <td
+                    key={hour}
+                    onClick={() => handleClickSlot(date, hour)}
+                    className={`border border-gray-300 px-1 py-1 cursor-pointer ${getCellColor(val)}`}
+                  >
+                    {val}
+                  </td>
+                );
+              })}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+
+      <button
+        onClick={handleSubmit}
+        className="mt-6 w-full py-2 bg-pink-400 text-white rounded-lg font-bold hover:bg-pink-500"
+      >
+        回答する
+      </button>
+    </div>
+  );
+};
+
+
+
+const RespondScheduleSummaryMulti = ({ answers, onBack, onEditAnswer, onDeleteAnswer }) => {
+  const [editingUser, setEditingUser] = useState(null);
+  const [tempAnswers, setTempAnswers] = useState({});
+
+  // 日付と時間軸を整理
+  const allDatesSet = new Set();
+  const allHoursSet = new Set();
+  Object.values(answers).forEach(userAns => {
+    Object.keys(userAns).forEach(date => {
+      allDatesSet.add(date);
+      Object.keys(userAns[date]).forEach(hour => allHoursSet.add(hour));
+    });
+  });
+  const allDates = Array.from(allDatesSet).sort();
+  const allHours = Array.from(allHoursSet).sort((a,b)=>parseInt(a)-parseInt(b));
+
+  // セルの色判定（×は非表示）
+  const getCellColor = (date, hour) => {
+    const hourValues = Object.values(answers)
+      .map(u => u[date]?.[hour])
+      .filter(v => v); // ×も含める
+    if (hourValues.includes("×")) return ""; // 一人でも×があれば色なし
+    if (hourValues.includes("△")) return "bg-yellow-200";
+    if (hourValues.length > 0 && hourValues.every(v => v === "◯")) return "bg-green-200";
+    return "";
+  };
+
+  
+
+  // 編集用セルの色判定（×も含む）
+  const getEditCellColor = (val) => {
+    if (val === "◯") return "bg-green-400 text-white";
+    if (val === "△") return "bg-yellow-400 text-white";
+    if (val === "×") return "bg-red-400 text-white";
+    return "";
+  };
+
+  const handleOpenEdit = (user) => {
+    setEditingUser(user);
+    setTempAnswers(answers[user]);
+  };
+
+  const handleSaveEdit = () => {
+    onEditAnswer?.(editingUser, tempAnswers);
+    setEditingUser(null);
+    setTempAnswers({});
+  };
+
+  return (
+    <div className="bg-white p-6 rounded-xl shadow-lg max-w-4xl mx-auto overflow-x-auto">
+      <h2 className="text-xl font-bold mb-4">全員の回答一覧</h2>
+
+      <table className="table-auto border-collapse border border-gray-300 w-full text-center text-sm">
+        <thead>
+          <tr className="bg-gray-100">
+            <th className="border border-gray-300 px-2 py-1 text-xs">日付 / 時間</th>
+            {allHours.map(hour => (
+              <th key={hour} className="border border-gray-300 px-2 py-1 text-xs">{hour}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {allDates.map(date => (
+            <tr key={date}>
+              <td className="border border-gray-300 px-2 py-1 font-semibold text-xs">{date}</td>
+              {allHours.map(hour => {
+                const bgClass = getCellColor(date, hour);
+                const entries = Object.entries(answers)
+                  .map(([user, userAns]) => {
+                    const val = userAns[date]?.[hour];
+                    if (!val || val === "×") return null; // 回答一覧では×非表示
+                    return `${user}:${val}`;
+                  })
+                  .filter(v => v)
+                  .join("\n");
+                return (
+                  <td key={hour} className={`border border-gray-300 px-1 py-1 ${bgClass} text-[10px] whitespace-pre-line`}>
+                    {entries}
+                  </td>
+                );
+              })}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+
+      {/* ユーザーごとの編集・削除ボタン */}
+      <div className="mt-4 space-y-2">
+        {Object.keys(answers).map(user => (
+          <div key={user} className="flex justify-between items-center p-2 border rounded bg-gray-50 text-xs">
+            <span className="font-semibold">{user}</span>
+            <div className="flex gap-2">
+              <button
+                onClick={() => handleOpenEdit(user)}
+                className="px-2 py-1 bg-blue-400 text-white rounded text-xs"
+              >
+                編集
+              </button>
+              <button
+                onClick={() => onDeleteAnswer?.(user)}
+                className="px-2 py-1 bg-red-400 text-white rounded text-xs"
+              >
+                削除
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* 戻るボタン */}
+      <div className="flex justify-end mt-4">
+        <button
+          onClick={onBack}
+          className="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400 font-bold text-sm"
+        >
+          戻る
+        </button>
+      </div>
+
+      {/* 編集モーダル */}
+      {editingUser && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-xl max-w-2xl w-full overflow-x-auto">
+            <h3 className="text-lg font-bold mb-4">{editingUser} の回答を編集</h3>
+            <table className="table-auto border-collapse border border-gray-300 w-full text-center text-xs">
+              <thead>
+                <tr className="bg-gray-100">
+                  <th className="border border-gray-300 px-2 py-1">日付 / 時間</th>
+                  {allHours.map(hour => (
+                    <th key={hour} className="border border-gray-300 px-2 py-1">{hour}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {allDates.map(date => (
+                  <tr key={date}>
+                    <td className="border border-gray-300 px-2 py-1 font-semibold">{date}</td>
+                    {allHours.map(hour => {
+                      const val = tempAnswers[date]?.[hour] || "×";
+                      const bgClass = getEditCellColor(val);
+                      return (
+                        <td key={hour} className={`border border-gray-300 px-1 py-1 cursor-pointer ${bgClass}`}
+                          onClick={() => {
+                            // ◯ → △ → × → ◯
+                            const next = val === "◯" ? "△" : val === "△" ? "×" : "◯";
+                            setTempAnswers(prev => ({
+                              ...prev,
+                              [date]: { ...(prev[date] || {}), [hour]: next }
+                            }));
+                          }}
+                        >
+                          {val}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+
+            <div className="flex justify-end mt-4 gap-3">
+              <button onClick={() => setEditingUser(null)} className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300">キャンセル</button>
+              <button onClick={handleSaveEdit} className="px-4 py-2 bg-blue-400 text-white rounded hover:bg-blue-500">保存</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+
+
 
 const EventModal = ({
   user,
@@ -456,6 +885,53 @@ function App() {
 
   const [page, setPage] = useState("start"); //スタートページの追加
   const today = new Date();
+  const [schedules, setSchedules] = useState({});
+  const [selectedScheduleId, setSelectedScheduleId] = useState(null); // 回答用ページで参照
+
+
+  useEffect(() => {
+    if (!selectedScheduleId) return;
+
+    const responsesRef = collection(db, "scheduleEvents", selectedScheduleId, "responses");
+    const unsubscribe = onSnapshot(responsesRef, snapshot => {
+      const loadedResponses = {};
+      snapshot.docs.forEach(doc => {
+        loadedResponses[doc.id] = doc.data().answers;
+      });
+      setSchedules(prev => ({
+        ...prev,
+        [selectedScheduleId]: {
+          ...prev[selectedScheduleId],
+          responses: loadedResponses
+        }
+      }));
+    });
+
+    return () => unsubscribe();
+  }, [selectedScheduleId]);
+
+  useEffect(() => {
+  const now = new Date();
+
+  Object.values(schedules).forEach(async (schedule) => {
+    const endDate = new Date(schedule.endDate);
+    const expiryDate = new Date(endDate);
+    expiryDate.setMonth(expiryDate.getMonth() + 1); // 終了日から1か月後
+
+    if (now > expiryDate) {
+      const { doc, deleteDoc } = await import("firebase/firestore");
+      await deleteDoc(doc(db, "scheduleEvents", schedule.id));
+      
+      // State 更新
+      setSchedules(prev => {
+        const copy = { ...prev };
+        delete copy[schedule.id];
+        return copy;
+      });
+    }
+  });
+}, [schedules]);
+
 
 
   // --- 2. ログイン状態の監視 ---
@@ -604,6 +1080,26 @@ function App() {
       <div
         className={`min-h-screen bg-gradient-to-br ${bgColor} flex items-center justify-center p-4`}
       >
+        <div className="absolute bottom-4 right-4">
+            {user ? (
+              <div className="flex items-center space-x-2">
+                <div
+                  className="w-6 h-6 rounded-full bg-green-400 border-2 border-white"
+                  title="ログイン中"
+                ></div>
+                <span className="text-xs text-black font-bold">
+                  ログイン中
+                </span>
+              </div>
+            ) : (
+              <button
+                onClick={handleLogin} // 既存のログイン関数
+                className="px-3 py-1 bg-white text-sm rounded-xl shadow hover:bg-gray-100 font-bold"
+              >
+                ログイン
+              </button>
+            )}
+          </div>
         {!user ? (
           <div className="bg-white p-10 rounded-3xl shadow-xl text-center max-w-sm w-full">
             <h2 className="text-2xl font-bold mb-6">🗓️ My Calendar</h2>
@@ -614,6 +1110,7 @@ function App() {
               Googleでサインイン
             </button>
           </div>
+
         ) : page === "start" ? (
           <StartPage
             today={today}
@@ -624,6 +1121,54 @@ function App() {
             }}
             onNext={() => setPage("next")}
           />
+        ) : page === "next" ? (
+          <ScheduleListPage
+            user={user}
+            onBack={() => setPage("start")}
+            setEvents={setEvents}
+            setSchedules={setSchedules}
+            schedules={schedules}
+            setCategoryOptions={setCategoryOptions}
+            setSelectedScheduleId={setSelectedScheduleId}
+            setPage={setPage}
+          />
+        ) : page === "respond" && selectedScheduleId && schedules[selectedScheduleId] ? (
+          // 回答ページ
+          <RespondSchedule
+            schedule={schedules[selectedScheduleId]}
+            onSubmit={(userName, answers) => {
+              setSchedules(prev => ({
+                ...prev,
+                [selectedScheduleId]: {
+                  ...prev[selectedScheduleId],
+                  responses: {
+                    ...prev[selectedScheduleId].responses,
+                    [userName]: answers
+                  }
+                }
+              }));
+              alert("回答ありがとうございました！");
+              setPage("start");
+            }}
+          />
+        ) : page === "summary" && selectedScheduleId && schedules[selectedScheduleId] ? (
+            <RespondScheduleSummaryMulti
+              answers={schedules[selectedScheduleId].responses}
+              onBack={() => setPage("start")}
+              onEditAnswer={(user) => {
+                alert(`${user} の回答を編集する処理`);
+                // ここに編集モーダル表示や再回答処理を入れる
+              }}
+              onDeleteAnswer={(user) => {
+                if(window.confirm(`${user} の回答を削除しますか？`)) {
+                  setSchedules(prev => {
+                    const copy = { ...prev };
+                    delete copy[selectedScheduleId].responses[user];
+                    return copy;
+                  });
+                }
+              }}
+            />
         ) : (
           <div className="bg-white p-6 rounded-3xl shadow-2xl w-full max-w-md">
           {view === "month" ? (
