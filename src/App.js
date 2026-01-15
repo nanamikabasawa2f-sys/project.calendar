@@ -5,6 +5,47 @@ import { subscribeToEvents } from './dbService';
 import { collection, onSnapshot, addDoc } from 'firebase/firestore';
 import './index.css';
 
+const StartPage = ({
+  today,
+  events,
+  onMonth,
+  onNext
+}) => {
+  return (
+    <div className="bg-white p-6 rounded-3xl shadow-xl w-full max-w-3xl">
+      <div className="grid grid-cols-3 gap-6">
+
+        {/* 左：今日の予定 */}
+        <div className="col-span-2 border rounded-2xl overflow-hidden scale-90 origin-top-left max-h-[420px]">
+          <DayView
+            selectedDate={today}
+            events={events}
+            readOnly={true}
+          />
+        </div>
+
+        {/* 右：ボタンエリア */}
+        <div className="flex flex-col gap-4">
+
+          <button
+            onClick={onMonth}
+            className="py-4 rounded-2xl bg-purple-400 text-white font-bold shadow"
+          >
+            月のカレンダーへ
+          </button>
+
+          <button
+            onClick={onNext}
+            className="py-4 rounded-2xl bg-gray-300 font-bold shadow"
+          >
+            日程調整
+          </button>
+
+        </div>
+      </div>
+    </div>
+  );
+};
 
 const EventModal = ({
   user,
@@ -284,7 +325,7 @@ const CategoryAddModal = ({ closeModal, onAddCategory }) => {
     </div>
   );
 };
-const DayView = ({ selectedDate, events, setView, onDelete}) => {
+const DayView = ({ selectedDate, events, setView, onDelete, readOnly = false}) => {
   const dateKey = `${selectedDate.getFullYear()}-${selectedDate.getMonth() + 1}-${selectedDate.getDate()}`;
   const dayEvents = events[dateKey] || [];
   
@@ -304,12 +345,16 @@ const DayView = ({ selectedDate, events, setView, onDelete}) => {
   return (
     <div className="p-4">
       <div className="flex justify-between items-center mb-6">
+
+        {!readOnly && (
         <button 
           className="px-4 py-2 bg-gray-500 text-white rounded-lg shadow hover:bg-gray-600 transition-colors"
           onClick={() => setView('month')} 
         >
           &lt; に戻る
         </button>
+        )}
+
         <h2 className="text-xl font-bold text-gray-800">
           {selectedDate.getFullYear()}年 {selectedDate.getMonth() + 1}月{selectedDate.getDate()}日
         </h2>
@@ -326,12 +371,14 @@ const DayView = ({ selectedDate, events, setView, onDelete}) => {
               className={`p-3 rounded-xl font-bold text-white shadow-sm flex justify-between items-center ${event.categoryColor || 'bg-gray-400'}`}
             >
               <span>{event.title} (終日)</span>
+              {!readOnly && (
               <button 
                 onClick={() => onDelete(dateKey, event.id)} 
                 className="ml-2 bg-white/20 p-1 rounded-full hover:bg-white/40 transition-colors"
               >
                 🗑️
               </button>
+              )}
             </div>
           ))
         ) : (
@@ -373,12 +420,14 @@ const DayView = ({ selectedDate, events, setView, onDelete}) => {
                     <div className="truncate">{event.title}</div>
                     <div className="text-[10px] opacity-80">{event.start} - {event.end}</div>
                   </div>
+                  {!readOnly && (
                   <button 
                     onClick={(e) => { e.stopPropagation(); onDelete(dateKey, event.id); }}
                     className="opacity-0 group-hover:opacity-100 bg-white/20 p-1 rounded-md hover:bg-white/40 transition-all"
                   >
                     🗑️
                   </button>
+                  )}
                 </div>
               );
             })}
@@ -404,6 +453,9 @@ function App() {
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [categoryOptions, setCategoryOptions] = useState([]);
   const [category, setCategory] = useState("");
+
+  const [page, setPage] = useState("start"); //スタートページの追加
+  const today = new Date();
 
 
   // --- 2. ログイン状態の監視 ---
@@ -562,9 +614,18 @@ function App() {
               Googleでサインイン
             </button>
           </div>
+        ) : page === "start" ? (
+          <StartPage
+            today={today}
+            events={events}
+            onMonth={() => {
+              setView("month");
+              setPage("calendar");
+            }}
+            onNext={() => setPage("next")}
+          />
         ) : (
-        <div className="bg-white p-6 rounded-3xl shadow-2xl w-full max-w-md">
-          {/* viewが "month" ならカレンダー、 "day" なら DayView を表示 */}
+          <div className="bg-white p-6 rounded-3xl shadow-2xl w-full max-w-md">
           {view === "month" ? (
             <>
               {/* ヘッダー・色替えボタン・カレンダー表示ロジック */}
